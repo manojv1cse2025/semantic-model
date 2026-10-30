@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ask about your data</title>
+<style>
+    body {
+        font-family: Arial, Helvetica, sans-serif;
+        background: #f5f6f8;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+    }
+
+    .card {
+        background: #78ecb0;
+        margin-top: 8vh;
+        padding: 32px;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        width: 90%;
+        max-width: 560px;
+    }
+
+    h1 {
+        font-size: 22px;
+        margin: 0 0 20px 0;
+        color: #222;
+        text-align: center;
+    }
+
+    .input-row {
+        display: flex;
+        gap: 10px;
+    }
+
+    #question {
+        flex: 1;
+        padding: 12px 14px;
+        font-size: 15px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        outline: none;
+    }
+
+    #question:focus {
+        border-color: #136b11;
+    }
+
+    #ask-button {
+        padding: 12px 20px;
+        font-size: 15px;
+        border: none;
+        border-radius: 8px;
+        background: #4a7dfc;
+        color: #fff;
+        cursor: pointer;
+    }
+
+    #ask-button:hover {
+        background: #3a6ae0;
+    }
+
+    #ask-button:disabled {
+        background: #a9bdf5;
+        cursor: not-allowed;
+    }
+
+    #answer-area {
+        margin-top: 24px;
+        min-height: 40px;
+        font-size: 16px;
+        line-height: 1.5;
+        color: #333;
+        white-space: pre-wrap;
+    }
+
+    #answer-area.thinking {
+        color: #888;
+        font-style: italic;
+    }
+
+    #answer-area.error {
+        color: #b3261e;
+    }
+</style>
+</head>
+<body>
+
+<div class="card">
+    <h1>Ask about your data</h1>
+
+    <div class="input-row">
+        <input type="text" id="question" placeholder="Ask a question, e.g. What were total sales last month?">
+        <button id="ask-button">Ask</button>
+    </div>
+
+    <div id="answer-area"></div>
+</div>
+
+<script>
+    const TENANT_ID = "11111111-1111-1111-1111-111111111111";
+    const WORKSPACE_ID = "22222222-2222-2222-2222-222222222222";
+    const SEMANTIC_MODEL_ID = "33333333-3333-3333-3333-333333333333";
+
+    const questionInput = document.getElementById("question");
+    const askButton = document.getElementById("ask-button");
+    const answerArea = document.getElementById("answer-area");
+
+    async function askQuestion() {
+        const question = questionInput.value.trim();
+
+        if (!question) {
+            return;
+        }
+
+        askButton.disabled = true;
+        answerArea.className = "thinking";
+        answerArea.textContent = "Thinking...";
+
+        try {
+            const response = await fetch("/query", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    tenant_id: TENANT_ID,
+                    workspace_id: WORKSPACE_ID,
+                    semantic_model_id: SEMANTIC_MODEL_ID,
+                    question: question
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error("Request failed");
+            }
+
+            const data = await response.json();
+            const text = data.answer[0].text;
+
+            if (typeof text !== "string" || !text) {
+                throw new Error("No answer text");
+            }
+
+            answerArea.className = "";
+            answerArea.textContent = text;
+        } catch (err) {
+            answerArea.className = "error";
+            answerArea.textContent = "Something went wrong, please try again.";
+        } finally {
+            askButton.disabled = false;
+        }
+    }
+
+    askButton.addEventListener("click", askQuestion);
+
+    questionInput.addEventListener("keydown", function (event) {
+        if (event.key === "Enter") {
+            askQuestion();
+        }
+    });
+</script>
+
+</body>
+</html>
